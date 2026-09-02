@@ -45,10 +45,12 @@ export function Composer({
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [truncationWarning, setTruncationWarning] = useState<string | null>(null);
 
   // Reset attachments when conversation changes
   useEffect(() => {
     setAttachments([]);
+    setTruncationWarning(null);
   }, [conversationId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,6 +188,13 @@ export function Composer({
              <Loader2 className="h-3.5 w-3.5 animate-spin" />
              <span>Reading document...</span>
           </div>
+        )}
+        
+        {truncationWarning && (
+            <div className="px-4 py-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-xs flex justify-between items-center border-t border-yellow-500/20">
+                <span>{truncationWarning}</span>
+                <button onClick={() => setTruncationWarning(null)}><X className="h-3 w-3" /></button>
+            </div>
         )}
 
         <textarea

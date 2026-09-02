@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
     let assistantMessageId: string | null = null;
     let clientAborted = false;
     let assistantSeqNumber = 0;
+    let truncationMetadata: any = null;
     
     // Manage attachment linking payload globally across stream block
     let globalAttachmentIdsToUpdate: string[] = [];
@@ -129,41 +130,6 @@ export async function POST(req: NextRequest) {
       const assistantSeq = lastSeq + 2;
       assistantSeqNumber = assistantSeq;
 
-      // Save user message to database
-      await prisma.message.create({
-        data: {
-          conversationId,
-          sequenceNo: userSeq,
-          role: "USER",
-          content: parsed.data.content,
-          status: "COMPLETED",
-        },
-      });
-
-      // Create assistant placeholder message
-      const assistantMessage = await prisma.message.create({
-        data: {
-          conversationId,
-          sequenceNo: assistantSeq,
-          role: "ASSISTANT",
-          content: "",
-          status: "PENDING",
-          providerKey: defaultProvider.providerKey,
-          modelId,
-        },
-      });
-      assistantMessageId = assistantMessage.id;
-
-      // Update conversation state to ACTIVE and bump lastMessageAt
-      await prisma.conversation.update({
-        where: { id: conversationId },
-        data: {
-          status: conversation.status === "DRAFT" ? "ACTIVE" : conversation.status,
-          lastMessageAt: new Date(),
-          modelId,
-        },
-      });
-
       // Build upstream prompt messages
       const userSettings = await prisma.userSettings.findUnique({
         where: { userId: session!.user!.id },
@@ -176,6 +142,15 @@ export async function POST(req: NextRequest) {
         DEFAULT_SYSTEM_PROMPT;
 
       messagesToSend.push({ role: "system", content: effectiveSystemPrompt });
+      
+      for (const msg of existingMessages) {
+        if (msg.status === "COMPLETED" || (msg.status === "CANCELLED" && msg.content)) {
+          messagesToSend.push({
+            role: msg.role === "USER" ? "user" : msg.role === "SYSTEM" ? "system" : "assistant",
+            content: msg.content,
+          });
+        }
+      }
 
       // Handle Attachments
       let documentContext = "";
@@ -207,24 +182,80 @@ export async function POST(req: NextRequest) {
            content: att.extractedText || "",
         }));
 
-        documentContext = constructDocumentContext(documents);
+        const contextResult = constructDocumentContext(documents);
+        documentContext = contextResult.content;
+        truncationMetadata = contextResult.truncated ? {
+            truncated: true,
+            includedChars: contextResult.includedChars,
+            totalChars: contextResult.totalChars
+        } : null;
+        
         globalAttachmentIdsToUpdate = attachments.map(a => a.id);
       }
 
-      for (const msg of existingMessages) {
-        if (msg.status === "COMPLETED" || (msg.status === "CANCELLED" && msg.content)) {
-          messagesToSend.push({
-            role: msg.role === "USER" ? "user" : msg.role === "SYSTEM" ? "system" : "assistant",
-            content: msg.content,
+      // Safe short-lived transaction ONLY for database operations before AI call
+      try {
+          await prisma.$transaction(async (tx) => {
+              // 1. Save user message to database
+              const userMessage = await tx.message.create({
+                data: {
+                  conversationId: conversationId!,
+                  sequenceNo: userSeq,
+                  role: "USER",
+                  content: parsed.data.content,
+                  status: "COMPLETED",
+                },
+              });
+
+              // 2. Create assistant placeholder message
+              const assistantMessage = await tx.message.create({
+                data: {
+                  conversationId: conversationId!,
+                  sequenceNo: assistantSeq,
+                  role: "ASSISTANT",
+                  content: "",
+                  status: "PENDING",
+                  providerKey: defaultProvider.providerKey,
+                  modelId,
+                },
+              });
+              assistantMessageId = assistantMessage.id;
+
+              // 3. Update conversation state
+              await tx.conversation.update({
+                where: { id: conversationId! },
+                data: {
+                  status: conversation.status === "DRAFT" ? "ACTIVE" : conversation.status,
+                  lastMessageAt: new Date(),
+                  modelId,
+                },
+              });
+
+              // 4. Atomically claim attachments if any
+              if (globalAttachmentIdsToUpdate.length > 0) {
+                  const updateResult = await tx.documentAttachment.updateMany({
+                      where: { 
+                          id: { in: globalAttachmentIdsToUpdate },
+                          status: "READY",
+                          messageId: null
+                      },
+                      data: {
+                          status: "ATTACHED",
+                          messageId: userMessage.id
+                      }
+                  });
+                  
+                  if (updateResult.count !== globalAttachmentIdsToUpdate.length) {
+                      throw new Error("Concurrent attachment claim detected");
+                  }
+              }
           });
-        }
+      } catch (txError: any) {
+          return createErrorResponse("INTERNAL_ERROR", "Gagal menyimpan pesan atau lampiran: " + txError.message, undefined, 500, undefined, requestId);
       }
 
       const finalUserContent = documentContext ? documentContext + parsed.data.content : parsed.data.content;
       messagesToSend.push({ role: "user", content: finalUserContent });
-      
-      // We will perform atomic transaction check ONLY if provider generation is successful to avoid orphans.
-      // But we lock them strictly via query conditions.
     } else {
       // 2. Guest User Flow
       const parsed = guestChatSchema.safeParse(body);
@@ -380,43 +411,34 @@ export async function POST(req: NextRequest) {
           const completionState = clientAborted ? "CANCELLED" : "COMPLETED";
 
           if (assistantMessageId) {
-            await prisma.$transaction(async (tx) => {
-                await tx.message.update({
-                    where: { id: assistantMessageId },
-                    data: {
-                    content: accumulatedContent,
-                    status: completionState,
-                    finishReason: finalFinishReason,
-                    promptTokens: finalUsage?.promptTokens ?? null,
-                    completionTokens: finalUsage?.completionTokens ?? null,
-                    totalTokens: finalUsage?.totalTokens ?? null,
-                    },
-                });
-
-                if (isAuth && globalAttachmentIdsToUpdate && globalAttachmentIdsToUpdate.length > 0) {
-                     // Atomic link
-                     const userMsg = await tx.message.findFirst({
-                         where: { conversationId: conversationId!, sequenceNo: assistantSeqNumber - 1, role: "USER" }
-                     });
-                     if (userMsg) {
-                         await tx.documentAttachment.updateMany({
-                             where: { id: { in: globalAttachmentIdsToUpdate }, status: "READY" },
-                             data: { status: "ATTACHED", messageId: userMsg.id }
-                         });
-                     }
-                }
+            await prisma.message.update({
+                where: { id: assistantMessageId },
+                data: {
+                content: accumulatedContent,
+                status: completionState,
+                finishReason: finalFinishReason,
+                promptTokens: finalUsage?.promptTokens ?? null,
+                completionTokens: finalUsage?.completionTokens ?? null,
+                totalTokens: finalUsage?.totalTokens ?? null,
+                },
             }).catch((e) => {
-                logger.error("Failed to persist final assistant message and attachments", { requestId, error: e.message });
+                logger.error("Failed to persist final assistant message", { requestId, error: e.message });
             });
           }
 
-          sendEvent("done", {
+          let responseMetadata: any = {
             content: accumulatedContent,
             finishReason: finalFinishReason,
             messageId: assistantMessageId,
             status: completionState,
             requestId,
-          });
+          };
+          
+          if (truncationMetadata) {
+              responseMetadata.truncation = truncationMetadata;
+          }
+
+          sendEvent("done", responseMetadata);
 
           const totalMs = Date.now() - startTime;
 
