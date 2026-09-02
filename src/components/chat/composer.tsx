@@ -271,7 +271,7 @@ export function Composer({
             </div>
         )}
 
-        <div className="px-2 pt-1">
+        <div className="flex flex-col gap-1.5 px-2 pt-1 sm:flex-row sm:items-end sm:gap-2 sm:pb-2">
           <textarea
             ref={textareaRef}
             value={value}
@@ -280,21 +280,20 @@ export function Composer({
             placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
             rows={1}
             disabled={disabled}
-            className="block h-auto min-h-[26px] w-full min-w-0 resize-none overflow-hidden bg-transparent px-3 pt-2.5 pb-1.5 text-[15px] font-normal leading-[1.6] placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="block h-auto min-h-[26px] w-full min-w-0 resize-none overflow-hidden bg-transparent px-3 pt-2.5 pb-1.5 text-[15px] font-normal leading-[1.6] placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 sm:flex-1"
             style={{ overflowY: "hidden" }}
           />
-        </div>
 
-        <div className="flex items-center justify-end gap-1.5 px-2 pb-2 pt-1">
-            <div className="min-w-0 max-w-[160px] flex-1 sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px]">
+          <div className="flex items-center justify-end gap-1.5 sm:shrink-0">
+            <div className="min-w-0 w-auto max-w-[160px] flex-1 sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px]">
               <ModelSelector
                 selectedModelId={modelId}
                 onSelectModel={onSelectModel}
                 disabled={disabled || isGenerating}
               />
             </div>
-            
-              <input
+
+            <input
               type="file"
               ref={fileInputRef}
               className="hidden"
@@ -303,7 +302,7 @@ export function Composer({
               onChange={handleFileSelect}
               disabled={!canAttachDocuments}
             />
-            
+
             <Button
               type="button"
               size="icon"
@@ -350,6 +349,7 @@ export function Composer({
                 <ArrowUp className="h-4 w-4" />
               </Button>
             )}
+          </div>
         </div>
       </div>
        <p className="mt-2 text-center text-[11px] font-normal text-muted-foreground">
