@@ -12,7 +12,8 @@ import {
   LogIn,
   Archive,
   MessageSquare,
-  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
   X,
 } from "lucide-react";
 import { Badge } from "../ui/badge";
@@ -129,10 +130,11 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             onClick={onToggleCollapse}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            className="group h-9 w-9 rounded-xl border border-white/10 bg-[#182235] text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_10px_rgba(0,0,0,0.28)] transition-all hover:border-white/15 hover:bg-[#1d2940] hover:text-[#6ea8ff] active:translate-y-px active:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_2px_8px_rgba(0,0,0,0.28),0_2px_6px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[#6ea8ff]/40 focus-visible:ring-offset-0 lg:h-9 lg:w-9"
             aria-label="Sembunyikan sidebar"
+            title="Sembunyikan sidebar"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <PanelLeftClose className="h-[18px] w-[18px] stroke-[1.9] transition-transform group-hover:scale-[1.03]" />
           </Button>
         )}
       </div>
@@ -301,12 +303,11 @@ export function Sidebar({
               variant="ghost"
               size="icon"
               onClick={onToggleCollapse}
-              className="h-10 w-10 rounded-xl p-0"
+              className="group h-9 w-9 rounded-xl border border-white/10 bg-[#182235] p-0 text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_10px_rgba(0,0,0,0.28)] transition-all hover:border-white/15 hover:bg-[#1d2940] hover:text-[#6ea8ff] active:translate-y-px active:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),inset_0_2px_8px_rgba(0,0,0,0.28),0_2px_6px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-[#6ea8ff]/40 focus-visible:ring-offset-0 lg:h-9 lg:w-9"
               aria-label="Buka sidebar"
+              title="Buka sidebar"
             >
-              <span className="brand-mark flex h-10 w-10 items-center justify-center rounded-2xl">
-                <img src="/adaai-robot.jpg" alt="Buka sidebar" />
-              </span>
+              <PanelLeftOpen className="h-[18px] w-[18px] stroke-[1.9] transition-transform group-hover:scale-[1.03]" />
             </Button>
 
             <Link href="/">
