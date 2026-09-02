@@ -117,10 +117,20 @@ export function Composer({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    textarea.style.height = "auto";
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, 52), 220);
-    textarea.style.height = `${newHeight}px`;
-  }, [value]);
+    // Reset height to let scrollHeight shrink if text was deleted
+    textarea.style.height = "0px";
+
+    const minHeight = 24;
+    const maxHeight = 180;
+    // Base padding + line height essentially. We want it compact when empty.
+    const scrollHeight = textarea.scrollHeight;
+    
+    // If it's mostly empty (just one line, no newlines), keep it at minHeight
+    const nextHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [value, attachments.length, isUploading]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -158,11 +168,11 @@ export function Composer({
         </div>
       )}
 
-      <div className="skeu-composer relative flex flex-col transition-all duration-200">
+      <div className="skeu-composer relative flex flex-col transition-all duration-200 min-h-[56px] justify-end">
         
         {/* Attachments UI */}
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
+          <div className="flex flex-wrap gap-2 px-4 pt-3 pb-2 border-b border-border/10">
             {attachments.map((file) => (
               <div 
                 key={file.id}
@@ -191,75 +201,78 @@ export function Composer({
         )}
         
         {truncationWarning && (
-            <div className="px-4 py-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-xs flex justify-between items-center border-t border-yellow-500/20">
+            <div className="px-4 py-1.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-xs flex justify-between items-center border-b border-yellow-500/20">
                 <span>{truncationWarning}</span>
                 <button onClick={() => setTruncationWarning(null)}><X className="h-3 w-3" /></button>
             </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
-          rows={1}
-          disabled={disabled}
-          className="w-full resize-none bg-transparent px-5 pt-4 pb-14 text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-        />
-
-        <div className="absolute right-3 bottom-2.5 flex items-center gap-2">
-          <ModelSelector
-            selectedModelId={modelId}
-            onSelectModel={onSelectModel}
-            disabled={disabled || isGenerating}
+        <div className="relative flex items-end w-full pb-2.5">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
+            rows={1}
+            disabled={disabled}
+            className="w-full resize-none bg-transparent pl-5 pr-[140px] py-3 text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            style={{ overflowY: "hidden" }}
           />
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept=".pdf,.docx,.txt,.md"
-            multiple
-            onChange={handleFileSelect}
-            disabled={disabled || isGenerating || isUploading || attachments.length >= 3}
-          />
-          
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="h-10 w-10 rounded-full shrink-0"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || isGenerating || isUploading || attachments.length >= 3 || !conversationId}
-            title={!conversationId ? "Ketik pesan pertama untuk mengunggah" : "Attach document"}
-          >
-            <Paperclip className="h-4 w-4 text-muted-foreground" />
-          </Button>
 
-          {isGenerating ? (
+          <div className="absolute right-3 bottom-0 mb-2.5 flex items-center gap-1.5">
+            <ModelSelector
+              selectedModelId={modelId}
+              onSelectModel={onSelectModel}
+              disabled={disabled || isGenerating}
+            />
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf,.docx,.txt,.md"
+              multiple
+              onChange={handleFileSelect}
+              disabled={disabled || isGenerating || isUploading || attachments.length >= 3}
+            />
+            
             <Button
               type="button"
               size="icon"
-              variant="destructive"
-              onClick={onStop}
-              className="h-10 w-10 rounded-full shadow-[0_0_18px_hsl(0_80%_62%_/_0.2)]"
-              aria-label="Hentikan jawaban"
+              variant="ghost"
+              className="h-10 w-10 rounded-full shrink-0 hover:bg-secondary/80 text-muted-foreground transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled || isGenerating || isUploading || attachments.length >= 3 || !conversationId}
+              title={!conversationId ? "Ketik pesan pertama untuk mengunggah" : "Attach document"}
             >
-              <Square className="h-4 w-4 fill-current" />
+              <Paperclip className="h-4 w-4" />
             </Button>
-          ) : (
-            <Button
-              type="button"
-              size="icon"
-              disabled={!value.trim() || disabled || isUploading}
-              onClick={handleSendClick}
-              className="h-10 w-10 rounded-full transition-transform active:scale-95 disabled:opacity-30"
-              aria-label="Kirim pesan"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-          )}
+
+            {isGenerating ? (
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                onClick={onStop}
+                className="h-10 w-10 rounded-full shadow-[0_0_18px_hsl(0_80%_62%_/_0.2)] shrink-0"
+                aria-label="Hentikan jawaban"
+              >
+                <Square className="h-4 w-4 fill-current" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="icon"
+                disabled={!value.trim() || disabled || isUploading}
+                onClick={handleSendClick}
+                className="h-10 w-10 rounded-full transition-transform active:scale-95 disabled:opacity-30 shrink-0"
+                aria-label="Kirim pesan"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       <p className="mt-2 text-center text-[11px] text-muted-foreground">
