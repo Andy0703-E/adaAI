@@ -117,7 +117,7 @@ export function MessageItem({
   }
 
   return (
-    <div className="flex gap-3 sm:gap-4 my-6 group">
+    <div className="flex gap-3 sm:gap-4 my-6 group lg:-translate-x-4">
       <div className="brand-mark flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-xl">
         <img src="/adaai-robot.jpg" alt="AdaAI" />
       </div>
