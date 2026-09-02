@@ -152,8 +152,8 @@ export async function POST(req: NextRequest) {
       where: { userId },
     });
 
-    const finalModelId = modelId || userSettings?.defaultModelId || aiConfig.defaultModel;
-    const finalProviderKey = userSettings?.defaultProviderKey || defaultProvider.providerKey;
+    const finalModelId = modelId || aiConfig.defaultModel;
+    const finalProviderKey = defaultProvider.providerKey;
 
     const conversation = await prisma.conversation.create({
       data: {

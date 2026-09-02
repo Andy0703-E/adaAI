@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
       return createErrorResponse("VALIDATION_FAILED", "Data pengaturan tidak valid.", parse.error.format());
     }
 
-    const { defaultModelId, defaultProviderKey, systemPrompt, temperature, maxOutputTokens } = parse.data;
+    const { systemPrompt } = parse.data;
 
     // Ensure settings record exists
     await getAuthorizedUserSettings(userId);
@@ -51,11 +51,7 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.userSettings.update({
       where: { userId },
       data: {
-        ...(defaultModelId !== undefined ? { defaultModelId } : {}),
-        ...(defaultProviderKey !== undefined ? { defaultProviderKey } : {}),
         ...(systemPrompt !== undefined ? { systemPrompt } : {}),
-        ...(temperature !== undefined ? { temperature } : {}),
-        ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
       },
     });
 

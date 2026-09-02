@@ -109,18 +109,11 @@ describe("Validation Schemas", () => {
       expect(valid.success).toBe(true);
     });
 
-    it("validates settings update with temperature", () => {
+    it("validates settings update with systemPrompt", () => {
       const valid = updateSettingsSchema.safeParse({
-        temperature: 0.7,
+        systemPrompt: "Act as an expert",
       });
       expect(valid.success).toBe(true);
-    });
-
-    it("rejects temperature outside 0..2", () => {
-      const result = updateSettingsSchema.safeParse({
-        temperature: 2.5,
-      });
-      expect(result.success).toBe(false);
     });
   });
 });

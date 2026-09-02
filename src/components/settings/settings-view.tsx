@@ -30,10 +30,7 @@ export function SettingsView() {
   const { settings, isLoading, updateSettings } = useSettings();
   const { models } = useModels();
 
-  const [defaultModelId, setDefaultModelId] = useState("auto");
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [temperature, setTemperature] = useState<number | "">("");
-  const [maxOutputTokens, setMaxOutputTokens] = useState<number | "">("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showClearAllDialog, setShowClearAllDialog] = useState(false);
@@ -45,10 +42,7 @@ export function SettingsView() {
 
   useEffect(() => {
     if (settings) {
-      setDefaultModelId(settings.defaultModelId || "auto");
       setSystemPrompt(settings.systemPrompt || "");
-      setTemperature(settings.temperature !== null && settings.temperature !== undefined ? settings.temperature : "");
-      setMaxOutputTokens(settings.maxOutputTokens !== null && settings.maxOutputTokens !== undefined ? settings.maxOutputTokens : "");
     }
   }, [settings]);
 
@@ -59,10 +53,7 @@ export function SettingsView() {
 
     try {
       await updateSettings({
-        defaultModelId: defaultModelId || null,
         systemPrompt: systemPrompt.trim() || null,
-        temperature: typeof temperature === "number" ? temperature : null,
-        maxOutputTokens: typeof maxOutputTokens === "number" ? maxOutputTokens : null,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -119,29 +110,7 @@ export function SettingsView() {
         <section className="space-y-4">
           <div className="flex items-center gap-2 text-base font-semibold">
             <Cpu className="h-5 w-5 text-primary" />
-            <h2>Preferensi Model</h2>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs font-medium text-muted-foreground">
-              Model Default untuk Percakapan Baru
-            </label>
-            <select
-              value={defaultModelId}
-              onChange={(e) => setDefaultModelId(e.target.value)}
-              disabled={isLoading}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? (
-                <option>Memuat model...</option>
-              ) : (
-                models.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-popover text-popover-foreground">
-                    {m.name} ({m.id})
-                  </option>
-                ))
-              )}
-            </select>
+            <h2>Preferensi AI</h2>
           </div>
 
           <div className="grid gap-2">
@@ -159,57 +128,6 @@ export function SettingsView() {
             <p className="text-[11px] text-muted-foreground">
               Instruksi dasar yang diterapkan pada setiap percakapan baru.
             </p>
-          </div>
-        </section>
-
-        {/* Model Generation Parameters */}
-        <section className="space-y-4 pt-4 border-t border-border">
-          <div className="flex items-center gap-2 text-base font-semibold">
-            <Sliders className="h-5 w-5 text-primary" />
-            <h2>Parameter Inferensi</h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Temperature (0.0 - 2.0)
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="2"
-                disabled={isLoading}
-                value={temperature}
-                onChange={(e) =>
-                  setTemperature(e.target.value === "" ? "" : parseFloat(e.target.value))
-                }
-                placeholder={isLoading ? "Memuat..." : "Default model (misal 0.7)"}
-              />
-              <p className="text-[11px] text-muted-foreground italic">
-                * Bergantung pada dukungan model/provider.
-              </p>
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                Max Output Tokens
-              </label>
-              <Input
-                type="number"
-                min="1"
-                max="32768"
-                disabled={isLoading}
-                value={maxOutputTokens}
-                onChange={(e) =>
-                  setMaxOutputTokens(e.target.value === "" ? "" : parseInt(e.target.value, 10))
-                }
-                placeholder={isLoading ? "Memuat..." : "Default model (misal 8192)"}
-              />
-              <p className="text-[11px] text-muted-foreground italic">
-                * Bergantung pada limit maksimum model.
-              </p>
-            </div>
           </div>
 
           <div className="mt-2 flex flex-col-reverse gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center">

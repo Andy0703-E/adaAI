@@ -104,11 +104,7 @@ model Message {
 model UserSettings {
   id                 String   @id @default(uuid()) @db.Uuid
   userId             String   @unique @map("user_id") @db.Uuid
-  defaultProviderKey String?  @map("default_provider_key") @db.VarChar(80)
-  defaultModelId     String?  @map("default_model_id") @db.VarChar(200)
   systemPrompt       String?  @map("system_prompt") @db.Text
-  temperature        Float?
-  maxOutputTokens    Int?     @map("max_output_tokens")
   theme              Theme    @default(SYSTEM)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
