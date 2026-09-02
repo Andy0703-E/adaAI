@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Code, BookOpen, Lightbulb, FileText, ArrowRight } from "lucide-react";
 
 interface EmptyStateProps {
@@ -112,7 +113,15 @@ export function EmptyState({ onSelectSuggestion }: EmptyStateProps) {
     <div className="flex flex-1 flex-col items-center justify-center mx-auto max-w-2xl px-4 py-6 text-center animate-in fade-in-50 duration-300 sm:py-8">
       <div data-testid="empty-state-logo" className="auth-orbit relative z-20 mb-5 sm:mb-6">
         <div className="brand-mark relative flex h-20 w-20 items-center justify-center rounded-[1.65rem]">
-          <img src="/adaai-robot.jpg" alt="Robot AdaAI" />
+          <Image
+            src="/adaai-robot.webp"
+            alt="Robot AdaAI"
+            width={512}
+            height={512}
+            priority
+            sizes="80px"
+            className="h-20 w-20 object-contain"
+          />
         </div>
       </div>
 
