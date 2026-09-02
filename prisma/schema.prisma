@@ -47,6 +47,7 @@ model User {
   conversations    Conversation[]
   settings         UserSettings?
   auditLogs        AuditLog[]
+  attachments      DocumentAttachment[]
 
   @@map("users")
 }
@@ -63,8 +64,9 @@ model Conversation {
   createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages       Message[]
+  attachments    DocumentAttachment[]
 
   @@index([userId, lastMessageAt(sort: Desc)], name: "conversations_user_last_message_idx")
   @@index([userId, status, lastMessageAt(sort: Desc)], name: "conversations_user_status_last_message_idx")
@@ -87,9 +89,10 @@ model Message {
   finishReason     String?       @map("finish_reason") @db.VarChar(80)
   errorCode        String?       @map("error_code") @db.VarChar(80)
   createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  conversation     Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation     Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments      DocumentAttachment[]
 
   @@unique([conversationId, sequenceNo], name: "messages_conversation_sequence_key")
   @@index([conversationId, sequenceNo(sort: Asc)], name: "messages_conversation_sequence_idx")
@@ -150,4 +153,34 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
+}
+
+enum DocumentAttachmentStatus {
+  UPLOADED
+  READY
+  FAILED
+  ATTACHED
+}
+
+model DocumentAttachment {
+  id              String                   @id @default(uuid()) @db.Uuid
+  userId          String                   @map("user_id") @db.Uuid
+  conversationId  String                   @map("conversation_id") @db.Uuid
+  messageId       String?                  @map("message_id") @db.Uuid
+  originalName    String                   @map("original_name") @db.VarChar(255)
+  mimeType        String                   @map("mime_type") @db.VarChar(127)
+  sizeBytes       Int                      @map("size_bytes")
+  extractedText   String?                  @map("extracted_text") @db.Text
+  extractedChars  Int?                     @map("extracted_chars")
+  status          DocumentAttachmentStatus @default(UPLOADED)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation    Conversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message         Message?                 @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([userId], name: "document_attachment_user_idx")
+  @@index([conversationId], name: "document_attachment_conversation_idx")
+  @@map("document_attachments")
 }

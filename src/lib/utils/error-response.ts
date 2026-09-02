@@ -10,7 +10,18 @@ export type ApiErrorCode =
   | "REDIS_UNAVAILABLE"
   | "AI_PROVIDER_UNAVAILABLE"
   | "AI_TIMEOUT"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "DOCUMENT_TOO_LARGE"
+  | "DOCUMENT_TOO_MANY_FILES"
+  | "DOCUMENT_UNSUPPORTED_TYPE"
+  | "DOCUMENT_MIME_MISMATCH"
+  | "DOCUMENT_INVALID_FILE"
+  | "DOCUMENT_PARSE_FAILED"
+  | "DOCUMENT_NO_EXTRACTABLE_TEXT"
+  | "DOCUMENT_TEXT_TOO_LARGE"
+  | "DOCUMENT_ATTACHMENT_NOT_FOUND"
+  | "DOCUMENT_ATTACHMENT_FORBIDDEN"
+  | "DOCUMENT_UPLOAD_FAILED";
 
 export interface NormalizedApiErrorResponse {
   error: ApiErrorCode;
@@ -31,6 +42,17 @@ const statusMap: Record<ApiErrorCode, number> = {
   AI_PROVIDER_UNAVAILABLE: 503,
   AI_TIMEOUT: 504,
   INTERNAL_ERROR: 500,
+  DOCUMENT_TOO_LARGE: 400,
+  DOCUMENT_TOO_MANY_FILES: 400,
+  DOCUMENT_UNSUPPORTED_TYPE: 400,
+  DOCUMENT_MIME_MISMATCH: 400,
+  DOCUMENT_INVALID_FILE: 400,
+  DOCUMENT_PARSE_FAILED: 400,
+  DOCUMENT_NO_EXTRACTABLE_TEXT: 400,
+  DOCUMENT_TEXT_TOO_LARGE: 400,
+  DOCUMENT_ATTACHMENT_NOT_FOUND: 404,
+  DOCUMENT_ATTACHMENT_FORBIDDEN: 403,
+  DOCUMENT_UPLOAD_FAILED: 500,
 };
 
 const safeDefaultMessages: Record<ApiErrorCode, string> = {
@@ -44,6 +66,17 @@ const safeDefaultMessages: Record<ApiErrorCode, string> = {
   AI_PROVIDER_UNAVAILABLE: "Penyedia model AI sementara tidak dapat dihubungi.",
   AI_TIMEOUT: "Waktu tunggu respons AI habis. Silakan coba lagi.",
   INTERNAL_ERROR: "Terjadi kesalahan internal pada server.",
+  DOCUMENT_TOO_LARGE: "File dokumen terlalu besar.",
+  DOCUMENT_TOO_MANY_FILES: "Terlalu banyak dokumen yang diunggah.",
+  DOCUMENT_UNSUPPORTED_TYPE: "Tipe dokumen tidak didukung.",
+  DOCUMENT_MIME_MISMATCH: "Tipe file tidak sesuai dengan ekstensi.",
+  DOCUMENT_INVALID_FILE: "File dokumen tidak valid.",
+  DOCUMENT_PARSE_FAILED: "Gagal memproses dokumen.",
+  DOCUMENT_NO_EXTRACTABLE_TEXT: "Tidak ada teks yang dapat diekstrak dari dokumen.",
+  DOCUMENT_TEXT_TOO_LARGE: "Teks dokumen terlalu panjang.",
+  DOCUMENT_ATTACHMENT_NOT_FOUND: "Lampiran dokumen tidak ditemukan.",
+  DOCUMENT_ATTACHMENT_FORBIDDEN: "Tidak memiliki akses ke lampiran dokumen.",
+  DOCUMENT_UPLOAD_FAILED: "Gagal mengunggah dokumen.",
 };
 
 export function createErrorResponse(

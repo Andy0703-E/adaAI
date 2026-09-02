@@ -10,6 +10,7 @@ export const authenticatedChatSchema = z.object({
   modelId: z.string().trim().max(200).optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxOutputTokens: z.number().int().positive().optional(),
+  attachmentIds: z.array(z.string().uuid()).max(3, "Maksimal 3 lampiran").optional(),
 });
 
 export const guestMessageSchema = z.object({

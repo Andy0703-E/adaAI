@@ -3,7 +3,8 @@ export type RateLimitScope =
   | "login"
   | "chat"
   | "conversation_create"
-  | "search";
+  | "search"
+  | "document_upload";
 
 export type FallbackBehavior = "fail-closed" | "fail-open";
 
@@ -43,5 +44,11 @@ export const RATE_LIMIT_POLICIES: Record<RateLimitScope, RateLimitPolicy> = {
     limit: 30,
     windowSeconds: 60,
     fallback: "fail-open",
+  },
+  // Document upload: 10 / 10 minutes / user (fail-closed for resource constraints)
+  document_upload: {
+    limit: 10,
+    windowSeconds: 10 * 60,
+    fallback: "fail-closed",
   },
 };

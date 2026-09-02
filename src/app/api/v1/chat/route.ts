@@ -5,6 +5,7 @@ import { defaultProvider } from "@/lib/ai/openai-compatible";
 import { aiConfig } from "@/lib/ai/config";
 import { parseSSEStream } from "@/lib/ai/stream-parser";
 import { authenticatedChatSchema, guestChatSchema } from "@/lib/validation/chat";
+import { constructDocumentContext } from "@/lib/documents/context";
 import { rateLimit } from "@/lib/rate-limit";
 import { createErrorResponse } from "@/lib/utils/error-response";
 import { logger } from "@/lib/logging/logger";
@@ -171,6 +172,37 @@ export async function POST(req: NextRequest) {
 
       messagesToSend.push({ role: "system", content: effectiveSystemPrompt });
 
+      // Handle Attachments
+      let documentContext = "";
+      let attachmentIdsToUpdate: string[] = [];
+
+      if (parsed.data.attachmentIds && parsed.data.attachmentIds.length > 0) {
+        if (parsed.data.attachmentIds.length > 3) {
+          return createErrorResponse("DOCUMENT_TOO_MANY_FILES", "Maksimal 3 lampiran", undefined, 400, undefined, requestId);
+        }
+
+        const attachments = await prisma.documentAttachment.findMany({
+          where: {
+            id: { in: parsed.data.attachmentIds },
+            userId,
+            conversationId,
+            status: "READY",
+          },
+        });
+
+        if (attachments.length !== parsed.data.attachmentIds.length) {
+          return createErrorResponse("DOCUMENT_ATTACHMENT_NOT_FOUND", "Satu atau lebih lampiran tidak valid atau bukan milik Anda.", undefined, 404, undefined, requestId);
+        }
+
+        const documents = attachments.map(att => ({
+           name: att.originalName,
+           content: att.extractedText || "",
+        }));
+
+        documentContext = constructDocumentContext(documents);
+        attachmentIdsToUpdate = attachments.map(a => a.id);
+      }
+
       for (const msg of existingMessages) {
         if (msg.status === "COMPLETED" || (msg.status === "CANCELLED" && msg.content)) {
           messagesToSend.push({
@@ -180,7 +212,25 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      messagesToSend.push({ role: "user", content: parsed.data.content });
+      const finalUserContent = documentContext ? documentContext + parsed.data.content : parsed.data.content;
+      messagesToSend.push({ role: "user", content: finalUserContent });
+      
+      // Update attachments to link to the new message and set status to ATTACHED
+      if (attachmentIdsToUpdate.length > 0) {
+        const userMessage = await prisma.message.findFirst({
+            where: { conversationId, sequenceNo: userSeq, role: "USER" }
+        });
+        
+        if (userMessage) {
+            await prisma.documentAttachment.updateMany({
+                where: { id: { in: attachmentIdsToUpdate } },
+                data: {
+                    messageId: userMessage.id,
+                    status: "ATTACHED"
+                }
+            });
+        }
+      }
     } else {
       // 2. Guest User Flow
       const parsed = guestChatSchema.safeParse(body);
