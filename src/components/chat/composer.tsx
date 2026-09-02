@@ -115,11 +115,15 @@ export function Composer({
           method: "POST",
           body: formData,
         });
-
-        const data = await response.json();
+        const contentType = response.headers?.get?.("content-type") || "";
+        const data = contentType.includes("application/json")
+          ? await response.json().catch(() => null)
+          : contentType
+            ? null
+            : await response.json().catch(() => null);
 
         if (!response.ok) {
-          throw new Error(data.message || "Gagal mengunggah dokumen");
+          throw new Error(data?.message || "Gagal mengunggah dokumen");
         }
 
         setAttachments((prev) => [...prev, {

@@ -15,6 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.100",
     "@node-rs/argon2": "^2.2.0",
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-dialog": "^1.1.6",
