@@ -7,6 +7,8 @@ import { rateLimit } from '@/lib/rate-limit';
 import { parseDocument } from '@/lib/documents/parser';
 import { DocumentAttachmentStatus } from '@prisma/client';
 
+export const runtime = "nodejs";
+
 const DOCUMENT_MAX_FILE_BYTES = 5242880; // 5 MB
 const DOCUMENT_MAX_FILES_PER_MESSAGE = 3;
 

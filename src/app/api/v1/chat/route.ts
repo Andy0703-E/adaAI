@@ -86,6 +86,10 @@ export async function POST(req: NextRequest) {
     let messagesToSend: ChatMessagePayload[] = [];
     let assistantMessageId: string | null = null;
     let clientAborted = false;
+    let assistantSeqNumber = 0;
+    
+    // Manage attachment linking payload globally across stream block
+    let globalAttachmentIdsToUpdate: string[] = [];
 
     const clientSignal = req.signal;
 
@@ -123,6 +127,7 @@ export async function POST(req: NextRequest) {
       const lastSeq = existingMessages.length > 0 ? existingMessages[existingMessages.length - 1].sequenceNo : 0;
       const userSeq = lastSeq + 1;
       const assistantSeq = lastSeq + 2;
+      assistantSeqNumber = assistantSeq;
 
       // Save user message to database
       await prisma.message.create({
@@ -174,24 +179,27 @@ export async function POST(req: NextRequest) {
 
       // Handle Attachments
       let documentContext = "";
-      let attachmentIdsToUpdate: string[] = [];
 
       if (parsed.data.attachmentIds && parsed.data.attachmentIds.length > 0) {
         if (parsed.data.attachmentIds.length > 3) {
           return createErrorResponse("DOCUMENT_TOO_MANY_FILES", "Maksimal 3 lampiran", undefined, 400, undefined, requestId);
         }
 
+        // Deduplicate
+        const uniqueIds = Array.from(new Set(parsed.data.attachmentIds));
+
         const attachments = await prisma.documentAttachment.findMany({
           where: {
-            id: { in: parsed.data.attachmentIds },
+            id: { in: uniqueIds },
             userId,
             conversationId,
-            status: "READY",
+            status: "READY", // MUST be READY, not ATTACHED or FAILED
+            messageId: null
           },
         });
 
-        if (attachments.length !== parsed.data.attachmentIds.length) {
-          return createErrorResponse("DOCUMENT_ATTACHMENT_NOT_FOUND", "Satu atau lebih lampiran tidak valid atau bukan milik Anda.", undefined, 404, undefined, requestId);
+        if (attachments.length !== uniqueIds.length) {
+          return createErrorResponse("DOCUMENT_ATTACHMENT_NOT_FOUND", "Satu atau lebih lampiran tidak valid, sudah terpakai, atau bukan milik Anda.", undefined, 403, undefined, requestId);
         }
 
         const documents = attachments.map(att => ({
@@ -200,7 +208,7 @@ export async function POST(req: NextRequest) {
         }));
 
         documentContext = constructDocumentContext(documents);
-        attachmentIdsToUpdate = attachments.map(a => a.id);
+        globalAttachmentIdsToUpdate = attachments.map(a => a.id);
       }
 
       for (const msg of existingMessages) {
@@ -215,22 +223,8 @@ export async function POST(req: NextRequest) {
       const finalUserContent = documentContext ? documentContext + parsed.data.content : parsed.data.content;
       messagesToSend.push({ role: "user", content: finalUserContent });
       
-      // Update attachments to link to the new message and set status to ATTACHED
-      if (attachmentIdsToUpdate.length > 0) {
-        const userMessage = await prisma.message.findFirst({
-            where: { conversationId, sequenceNo: userSeq, role: "USER" }
-        });
-        
-        if (userMessage) {
-            await prisma.documentAttachment.updateMany({
-                where: { id: { in: attachmentIdsToUpdate } },
-                data: {
-                    messageId: userMessage.id,
-                    status: "ATTACHED"
-                }
-            });
-        }
-      }
+      // We will perform atomic transaction check ONLY if provider generation is successful to avoid orphans.
+      // But we lock them strictly via query conditions.
     } else {
       // 2. Guest User Flow
       const parsed = guestChatSchema.safeParse(body);
@@ -385,23 +379,35 @@ export async function POST(req: NextRequest) {
 
           const completionState = clientAborted ? "CANCELLED" : "COMPLETED";
 
-          // Persist final completion or cancellation
           if (assistantMessageId) {
-            await prisma.message
-              .update({
-                where: { id: assistantMessageId },
-                data: {
-                  content: accumulatedContent,
-                  status: completionState,
-                  finishReason: finalFinishReason,
-                  promptTokens: finalUsage?.promptTokens ?? null,
-                  completionTokens: finalUsage?.completionTokens ?? null,
-                  totalTokens: finalUsage?.totalTokens ?? null,
-                },
-              })
-              .catch((e) => {
-                logger.error("Failed to persist final assistant message", { requestId, error: e.message });
-              });
+            await prisma.$transaction(async (tx) => {
+                await tx.message.update({
+                    where: { id: assistantMessageId },
+                    data: {
+                    content: accumulatedContent,
+                    status: completionState,
+                    finishReason: finalFinishReason,
+                    promptTokens: finalUsage?.promptTokens ?? null,
+                    completionTokens: finalUsage?.completionTokens ?? null,
+                    totalTokens: finalUsage?.totalTokens ?? null,
+                    },
+                });
+
+                if (isAuth && globalAttachmentIdsToUpdate && globalAttachmentIdsToUpdate.length > 0) {
+                     // Atomic link
+                     const userMsg = await tx.message.findFirst({
+                         where: { conversationId: conversationId!, sequenceNo: assistantSeqNumber - 1, role: "USER" }
+                     });
+                     if (userMsg) {
+                         await tx.documentAttachment.updateMany({
+                             where: { id: { in: globalAttachmentIdsToUpdate }, status: "READY" },
+                             data: { status: "ATTACHED", messageId: userMsg.id }
+                         });
+                     }
+                }
+            }).catch((e) => {
+                logger.error("Failed to persist final assistant message and attachments", { requestId, error: e.message });
+            });
           }
 
           sendEvent("done", {
