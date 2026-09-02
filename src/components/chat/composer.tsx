@@ -280,7 +280,7 @@ export function Composer({
             placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
             rows={1}
             disabled={disabled}
-            className="min-w-0 flex-1 resize-none bg-transparent py-2.5 pl-3 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 sm:text-base"
+            className="min-w-0 flex-1 resize-none bg-transparent py-2.5 pl-3 text-[15px] font-normal leading-[1.6] placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             style={{ overflowY: "hidden" }}
           />
 
@@ -352,7 +352,7 @@ export function Composer({
           </div>
         </div>
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+       <p className="mt-2 text-center text-[11px] font-normal text-muted-foreground">
         AdaAI dapat membuat kesalahan. Harap verifikasi informasi penting.
       </p>
     </div>

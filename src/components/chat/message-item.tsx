@@ -80,12 +80,12 @@ export function MessageItem({
             </div>
           ) : (
             <div className="relative group/bubble">
-              <div className="skeu-user-message text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+              <div className="skeu-user-message text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3 text-[15px] font-normal leading-[1.6] whitespace-pre-wrap">
                 {message.content}
               </div>
 
               {/* User message actions */}
-              <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-[12px] font-medium">
                 {isLastUser && !isGenerating && (
                   <Button
                     variant="ghost"
@@ -123,9 +123,9 @@ export function MessageItem({
       </div>
 
       <div className="flex-1 space-y-2 overflow-hidden">
-        <div className="skeu-assistant-card px-4 py-3">
+        <div className="skeu-assistant-card px-4 py-3 text-[15px] font-normal leading-[1.65]">
           {message.status === "PENDING" && !message.content ? (
-          <div className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 py-1 text-[14px] font-normal text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-primary animate-ping" />
             <span>
               {generationStage === "connecting"
@@ -138,7 +138,7 @@ export function MessageItem({
             </span>
           </div>
           ) : message.status === "STREAMING" ? (
-          <div className="whitespace-pre-wrap leading-relaxed text-sm sm:text-base break-words font-sans text-foreground/90">
+          <div className="whitespace-pre-wrap text-[15px] leading-[1.65] break-words font-normal text-foreground/90">
             {message.content}
             <span className="inline-block h-4 w-1.5 bg-primary/70 animate-pulse ml-0.5 align-middle" />
           </div>
@@ -168,7 +168,7 @@ export function MessageItem({
 
         {/* Action bar for assistant */}
         {message.content && !isGenerating && (
-          <div className="flex items-center gap-1.5 pt-2 opacity-80 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1.5 pt-2 opacity-80 group-hover:opacity-100 transition-opacity text-[12px] font-medium">
             <Button
               variant="ghost"
               size="sm"

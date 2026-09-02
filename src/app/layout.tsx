@@ -4,6 +4,12 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { auth } from "@/lib/auth/auth";
+import { Geist } from "next/font/google";
+
+const geist = Geist({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "AdaAI - Platform Chat AI Modern",
@@ -23,7 +29,7 @@ export default async function RootLayout({
 
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/20">
+      <body className={`${geist.className} min-h-screen bg-background antialiased text-foreground selection:bg-primary/20`}>
         <AuthProvider session={session}>
           <QueryProvider>
             <ThemeProvider>{children}</ThemeProvider>

@@ -56,7 +56,7 @@ export function ConversationList({
     <div className="space-y-4">
       {groups.today.length > 0 && (
         <div className="space-y-1">
-          <div className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Hari Ini
           </div>
           {groups.today.map((c) => (
@@ -75,7 +75,7 @@ export function ConversationList({
 
       {groups.past7Days.length > 0 && (
         <div className="space-y-1">
-          <div className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             7 Hari Terakhir
           </div>
           {groups.past7Days.map((c) => (
@@ -94,7 +94,7 @@ export function ConversationList({
 
       {groups.older.length > 0 && (
         <div className="space-y-1">
-          <div className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="px-2.5 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Lebih Lama
           </div>
           {groups.older.map((c) => (

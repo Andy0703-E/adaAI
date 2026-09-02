@@ -42,7 +42,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const [thoughtsOpen, setThoughtsOpen] = React.useState(isThinking);
 
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed break-words space-y-3">
+    <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] sm:text-base leading-[1.65] break-words space-y-3 font-normal">
       {thoughts && (
         <div className="skeu-inset my-2 overflow-hidden rounded-xl text-xs not-prose">
           <button
@@ -83,7 +83,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             if (isInline) {
               return (
                 <code
-                  className="rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-xs font-medium text-foreground/90"
+                  className="rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 font-mono text-[13px] font-medium text-foreground/90"
                   {...props}
                 >
                   {children}
@@ -141,7 +141,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             return <ol className="list-decimal list-outside pl-5 space-y-1 my-2">{children}</ol>;
           },
           p({ children }) {
-            return <p className="mb-2 leading-relaxed last:mb-0">{children}</p>;
+            return <p className="mb-2 leading-[1.65] last:mb-0">{children}</p>;
           },
         }}
       >

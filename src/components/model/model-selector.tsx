@@ -47,7 +47,7 @@ export function ModelSelector({
           variant="ghost"
           size="sm"
           disabled={disabled}
-          className="skeu-inset flex h-9 w-auto min-w-0 max-w-full items-center gap-1.5 rounded-xl border border-border/70 px-2.5 font-semibold text-xs hover:bg-accent/60 sm:text-sm"
+          className="skeu-inset flex h-9 w-auto min-w-0 max-w-full items-center gap-1.5 rounded-xl border border-border/70 px-2.5 text-[13px] font-medium hover:bg-accent/60 sm:text-sm"
           aria-label="Pilih Model AI"
           title={currentModel.name}
         >
@@ -98,7 +98,7 @@ export function ModelSelector({
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-foreground">{model.name}</span>
+                        <span className="font-medium text-foreground">{model.name}</span>
                         {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
                       </div>
                       <p className="text-[11px] text-muted-foreground font-mono truncate max-w-[210px]">

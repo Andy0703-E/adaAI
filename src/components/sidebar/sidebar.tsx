@@ -108,7 +108,7 @@ export function Sidebar({
         <Link
           href="/"
           onClick={() => isMobile && onCloseMobile?.()}
-          className="flex items-center gap-3 font-bold tracking-tight text-foreground"
+          className="flex items-center gap-3 text-[18px] font-bold tracking-tight text-foreground"
         >
           <div className="brand-mark h-11 w-11 rounded-2xl">
             <img src="/adaai-robot.jpg" alt="AdaAI" />
@@ -144,9 +144,9 @@ export function Sidebar({
         <Link
           href="/"
           onClick={() => isMobile && onCloseMobile?.()}
-          className="block"
-        >
-          <Button className="w-full justify-start gap-2 h-10 px-3 text-xs font-bold tracking-wide">
+            className="block"
+          >
+          <Button className="w-full justify-start gap-2 h-10 px-3 text-xs font-semibold tracking-wide">
             <Plus className="h-4 w-4" />
             <span>Chat Baru</span>
           </Button>
@@ -223,7 +223,7 @@ export function Sidebar({
                 {session?.user?.name?.charAt(0).toUpperCase() || "U"}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-semibold text-foreground truncate group-hover:underline">
+                <p className="text-xs font-medium text-foreground truncate group-hover:underline">
                   {session?.user?.name}
                 </p>
                 <p className="text-[10px] text-muted-foreground truncate">
