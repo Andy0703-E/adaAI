@@ -36,6 +36,7 @@ export function ChatContainer({
     errorBanner,
     sendMessage,
     stopGeneration,
+    createConversation,
     regenerateLast,
     editingMessageId,
     editInput,
@@ -90,13 +91,15 @@ export function ChatContainer({
       <Composer
         value={input}
         onChange={setInput}
-        onSend={() => sendMessage()}
+        onSend={(attachmentIds) => sendMessage(undefined, undefined, attachmentIds)}
         onStop={stopGeneration}
         isGenerating={isGenerating}
         showScrollBottom={showScrollBottom}
         onScrollToBottom={() => scrollToBottomRef.current?.()}
         modelId={modelId}
         onSelectModel={setModelId}
+        conversationId={conversationId}
+        onCreateConversation={createConversation}
       />
     </div>
   );

@@ -25,6 +25,9 @@ interface ComposerProps {
   modelId?: string;
   onSelectModel?: (modelId: string) => void;
   conversationId?: string | null;
+  // Callback to auto-create a conversation before upload when none exists.
+  // Returns the new conversationId. Must update parent state too.
+  onCreateConversation?: () => Promise<string | null>;
 }
 
 export function Composer({
@@ -39,18 +42,27 @@ export function Composer({
   modelId = "auto",
   onSelectModel = () => {},
   conversationId,
+  onCreateConversation,
 }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [truncationWarning, setTruncationWarning] = useState<string | null>(null);
 
-  // Reset attachments when conversation changes
+  // Stable ref so upload handler always sees the latest conversationId
+  // without triggering re-renders or stale closure issues.
+  const conversationIdRef = useRef<string | null | undefined>(conversationId);
+  const previousConversationIdRef = useRef<string | null | undefined>(conversationId);
   useEffect(() => {
-    setAttachments([]);
-    setTruncationWarning(null);
+    conversationIdRef.current = conversationId;
+    if (previousConversationIdRef.current && previousConversationIdRef.current !== conversationId) {
+      setAttachments([]);
+      setTruncationWarning(null);
+    }
+    previousConversationIdRef.current = conversationId;
   }, [conversationId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,9 +74,29 @@ export function Composer({
       return;
     }
 
-    if (!conversationId) {
-       alert("Harap ketik pesan pertama Anda sebelum mengunggah dokumen.");
-       return;
+    // --- Auto-create conversation if none exists yet ---
+    let activeConversationId = conversationIdRef.current;
+
+    if (!activeConversationId) {
+      if (!onCreateConversation) {
+        alert("Harap ketik pesan pertama Anda sebelum mengunggah dokumen.");
+        return;
+      }
+      setIsCreatingConversation(true);
+      try {
+        const newId = await onCreateConversation();
+        if (!newId) {
+          alert("Gagal menyiapkan percakapan. Silakan coba lagi.");
+          return;
+        }
+        activeConversationId = newId;
+        conversationIdRef.current = newId;
+      } catch {
+        alert("Gagal menyiapkan percakapan. Silakan coba lagi.");
+        return;
+      } finally {
+        setIsCreatingConversation(false);
+      }
     }
 
     setIsUploading(true);
@@ -79,7 +111,7 @@ export function Composer({
       formData.append("file", file);
 
       try {
-        const response = await fetch(`/api/v1/conversations/${conversationId}/attachments`, {
+        const response = await fetch(`/api/v1/conversations/${activeConversationId}/attachments`, {
           method: "POST",
           body: formData,
         });
@@ -176,14 +208,14 @@ export function Composer({
             {attachments.map((file) => (
               <div 
                 key={file.id}
-                className="flex items-center gap-2 bg-secondary/50 rounded-md py-1.5 px-3 text-xs border border-border/50"
+                className="flex min-w-0 max-w-full items-center gap-2 rounded-md border border-border/50 bg-secondary/50 px-3 py-1.5 text-xs"
               >
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="max-w-[120px] truncate">{file.name}</span>
+                <span className="min-w-0 max-w-[120px] truncate">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeAttachment(file.id)}
-                  className="hover:bg-background rounded-full p-0.5 ml-1 transition-colors"
+                  className="ml-1 shrink-0 rounded-full p-0.5 transition-colors hover:bg-background"
                   disabled={isGenerating || isUploading}
                 >
                   <X className="h-3 w-3" />
@@ -196,7 +228,14 @@ export function Composer({
         {isUploading && (
           <div className="flex items-center gap-2 px-4 pt-3 pb-1 text-xs text-muted-foreground">
              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-             <span>Reading document...</span>
+             <span>Membaca dokumen...</span>
+          </div>
+        )}
+        
+        {isCreatingConversation && (
+          <div className="flex items-center gap-2 px-4 pt-3 pb-1 text-xs text-muted-foreground">
+             <Loader2 className="h-3.5 w-3.5 animate-spin" />
+             <span>Menyiapkan percakapan...</span>
           </div>
         )}
         
@@ -216,12 +255,12 @@ export function Composer({
             placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
             rows={1}
             disabled={disabled}
-            className="w-full resize-none bg-transparent pl-3 py-2.5 text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="min-w-0 flex-1 resize-none bg-transparent py-2.5 pl-3 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 sm:text-base"
             style={{ overflowY: "hidden" }}
           />
 
-          <div className="flex items-center gap-1.5 shrink-0 pb-0.5 pr-1">
-            <div className="max-w-[100px] sm:max-w-[140px] truncate">
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 pb-0.5 pr-1">
+            <div className="min-w-0 w-auto max-w-[150px] sm:max-w-[210px] md:max-w-[260px] lg:max-w-[300px]">
               <ModelSelector
                 selectedModelId={modelId}
                 onSelectModel={onSelectModel}
@@ -236,7 +275,7 @@ export function Composer({
               accept=".pdf,.docx,.txt,.md"
               multiple
               onChange={handleFileSelect}
-              disabled={disabled || isGenerating || isUploading || attachments.length >= 3}
+              disabled={disabled || isGenerating || isUploading || isCreatingConversation || attachments.length >= 3}
             />
             
             <Button
@@ -245,8 +284,8 @@ export function Composer({
               variant="ghost"
               className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0 hover:bg-secondary/80 text-muted-foreground transition-colors"
               onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isGenerating || isUploading || attachments.length >= 3 || !conversationId}
-              title={!conversationId ? "Ketik pesan pertama untuk mengunggah" : "Attach document"}
+              disabled={disabled || isGenerating || isUploading || isCreatingConversation || attachments.length >= 3}
+              title={isCreatingConversation ? "Menyiapkan percakapan..." : "Attach document"}
             >
               <Paperclip className="h-4 w-4" />
             </Button>

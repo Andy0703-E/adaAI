@@ -1,0 +1,120 @@
+/**
+ * @vitest-environment jsdom
+ */
+import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Composer } from "@/components/chat/composer";
+
+vi.mock("@/components/model/model-selector", () => ({
+  ModelSelector: ({ selectedModelId }: { selectedModelId: string }) => (
+    <button type="button">{selectedModelId}</button>
+  ),
+}));
+
+const file = new File(["document"], "nama-dokumen-yang-sangat-panjang-sekali.txt", {
+  type: "text/plain",
+});
+
+function renderComposer(overrides: Partial<React.ComponentProps<typeof Composer>> = {}) {
+  const props: React.ComponentProps<typeof Composer> = {
+    value: "prompt",
+    onChange: vi.fn(),
+    onSend: vi.fn(),
+    onStop: vi.fn(),
+    isGenerating: false,
+    modelId: "Deepseek V4 Flash Vision Exp",
+    ...overrides,
+  };
+  const view = render(<Composer {...props} />);
+  const input = view.container.querySelector('input[type="file"]') as HTMLInputElement;
+  return { ...view, input, props };
+}
+
+describe("Composer attachment preparation", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.stubGlobal("alert", vi.fn());
+  });
+
+  it("uploads directly to an existing conversation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "attachment-1", name: file.name, mimeType: file.type, sizeBytes: file.size }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const create = vi.fn();
+    const { input } = renderComposer({ conversationId: "conversation-existing", onCreateConversation: create });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByText(file.name);
+    expect(create).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/conversations/conversation-existing/attachments",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("creates a conversation before uploading on New Chat", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "attachment-1", name: file.name, mimeType: file.type, sizeBytes: file.size }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const create = vi.fn().mockResolvedValue("conversation-new");
+    const { input } = renderComposer({ onCreateConversation: create });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByText(file.name);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/conversations/conversation-new/attachments",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("does not upload when conversation creation fails", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { input } = renderComposer({ onCreateConversation: vi.fn().mockResolvedValue(null) });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the created conversation when upload fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ message: "Upload gagal" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const create = vi.fn().mockResolvedValue("conversation-new");
+    const { input, rerender, props } = renderComposer({ onCreateConversation: create });
+
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => expect(alert).toHaveBeenCalledWith("Upload gagal"));
+    rerender(<Composer {...props} conversationId="conversation-new" />);
+
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(file.name)).toBeNull();
+  });
+
+  it("uses flow-safe responsive classes for actions and long filenames", () => {
+    const { container } = renderComposer({ conversationId: "conversation-existing" });
+    const textarea = screen.getByRole("textbox");
+    const modelWrapper = screen.getByText("Deepseek V4 Flash Vision Exp").parentElement;
+    const actionRow = modelWrapper?.parentElement;
+
+    expect(textarea.className).toContain("flex-1");
+    expect(textarea.className).toContain("min-w-0");
+    expect(modelWrapper?.className).toContain("max-w-[150px]");
+    expect(modelWrapper?.className).toContain("lg:max-w-[300px]");
+    expect(actionRow?.className).not.toContain("absolute");
+    expect(container.querySelector('[aria-label="Kirim pesan"]')).not.toBeNull();
+    expect(container.querySelector('[title="Attach document"]')).not.toBeNull();
+  });
+});

@@ -40,6 +40,8 @@ export function useChat({
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const conversationIdRef = useRef<string | undefined>(propConversationId);
+  const createConversationPromiseRef = useRef<Promise<string | null> | null>(null);
   const loadedConvIdRef = useRef<string | null>(propConversationId ?? null);
   const accumulatedRef = useRef("");
   const serverAssistantIdRef = useRef<string | null>(null);
@@ -51,6 +53,7 @@ export function useChat({
   useEffect(() => {
     if (propConversationId !== prevPropConvIdRef.current) {
       prevPropConvIdRef.current = propConversationId;
+      conversationIdRef.current = propConversationId;
       setConversationId(propConversationId);
       if (propConversationId && initialMessagesRef.current.length > 0) {
         loadedConvIdRef.current = propConversationId;
@@ -118,9 +121,53 @@ export function useChat({
     setGenerationStage("idle");
   }, []);
 
+  /**
+   * Creates a conversation without sending any message.
+   * Used by the Composer to prepare a conversation before attachment upload.
+   * Returns the new conversationId or null on failure.
+   */
+  const createConversation = useCallback(
+    async (title?: string): Promise<string | null> => {
+      if (!isAuth) return null;
+      if (conversationIdRef.current) return conversationIdRef.current;
+      if (createConversationPromiseRef.current) return createConversationPromiseRef.current;
+
+      createConversationPromiseRef.current = (async () => {
+        try {
+          const res = await fetch("/api/v1/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: title || "New Chat", modelId }),
+          });
+          if (!res.ok) return null;
+          const json = await res.json();
+          const newConversation = json.data as Conversation;
+          conversationIdRef.current = newConversation.id;
+          prependActiveConversationToCache(queryClient, session?.user?.id, newConversation);
+          loadedConvIdRef.current = newConversation.id;
+          setConversationId(newConversation.id);
+          window.history.replaceState(null, "", `/chat/${newConversation.id}`);
+          if (onConversationCreated) onConversationCreated(newConversation.id);
+          return newConversation.id;
+        } catch {
+          return null;
+        } finally {
+          createConversationPromiseRef.current = null;
+        }
+      })();
+
+      return createConversationPromiseRef.current;
+    },
+    [isAuth, modelId, queryClient, session?.user?.id, onConversationCreated]
+  );
+
   // Send message
   const sendMessage = useCallback(
-    async (promptToSend?: string, overrideMessages?: Message[]) => {
+    async (
+      promptToSend?: string,
+      overrideMessages?: Message[],
+      attachmentIds?: string[]
+    ) => {
       const text = (promptToSend ?? input).trim();
       if (!text || isGenerating) return;
 
@@ -168,32 +215,17 @@ export function useChat({
       let flushTimer: NodeJS.Timeout | null = null;
 
       try {
-        let activeConvId = conversationId;
+        let activeConvId = conversationIdRef.current;
 
         // If authenticated and no conversation exists yet, create one first
         if (isAuth && !activeConvId) {
-          const createRes = await fetch("/api/v1/conversations", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: text.slice(0, 40) + (text.length > 40 ? "..." : ""),
-              modelId,
-            }),
-          });
-          if (!createRes.ok) {
+          const createdConversationId = await createConversation(
+            text.slice(0, 40) + (text.length > 40 ? "..." : "")
+          );
+          if (!createdConversationId) {
             throw new Error("Gagal menginisialisasi percakapan baru.");
           }
-          const convJson = await createRes.json();
-          const newConversation = convJson.data as Conversation;
-          activeConvId = newConversation.id;
-          prependActiveConversationToCache(queryClient, session?.user?.id, newConversation);
-          loadedConvIdRef.current = activeConvId ?? null;
-          setConversationId(activeConvId);
-          if (onConversationCreated && activeConvId) {
-            onConversationCreated(activeConvId);
-          }
-          // Update URL silently
-          window.history.replaceState(null, "", `/chat/${activeConvId}`);
+          activeConvId = createdConversationId;
         }
 
         setGenerationStage("waiting_model");
@@ -204,6 +236,7 @@ export function useChat({
               conversationId: activeConvId,
               content: text,
               modelId,
+              attachmentIds,
             }
           : {
               messages: updatedList
@@ -388,6 +421,7 @@ export function useChat({
       modelId,
       messages,
       onConversationCreated,
+      createConversation,
       queryClient,
       session?.user?.id,
     ]
@@ -441,6 +475,7 @@ export function useChat({
   const clearChat = () => {
     stopGeneration();
     setMessages([]);
+    conversationIdRef.current = undefined;
     setConversationId(undefined);
     sessionStorage.removeItem("ada_ai_guest_chat");
     router.push("/");
@@ -459,6 +494,7 @@ export function useChat({
     setErrorBanner,
     sendMessage,
     stopGeneration,
+    createConversation,
     regenerateLast,
     clearChat,
     editingMessageId,

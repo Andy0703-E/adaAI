@@ -47,14 +47,15 @@ export function ModelSelector({
           variant="ghost"
           size="sm"
           disabled={disabled}
-          className="skeu-inset h-9 rounded-xl border border-border/70 px-2.5 flex items-center gap-1.5 font-semibold text-xs sm:text-sm hover:bg-accent/60"
+          className="skeu-inset flex h-9 w-auto min-w-0 max-w-full items-center gap-1.5 rounded-xl border border-border/70 px-2.5 font-semibold text-xs hover:bg-accent/60 sm:text-sm"
           aria-label="Pilih Model AI"
+          title={currentModel.name}
         >
-          <Cpu className="h-3.5 w-3.5 text-primary" />
-          <span className="max-w-[120px] sm:max-w-[180px] truncate">
+          <Cpu className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="min-w-0 truncate whitespace-nowrap">
             {currentModel.name}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-50 ml-0.5" />
+          <ChevronDown className="ml-0.5 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
 
