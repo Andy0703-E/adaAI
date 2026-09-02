@@ -6,6 +6,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Composer } from "@/components/chat/composer";
 
+const sessionState = vi.hoisted(() => ({
+  status: "authenticated" as "loading" | "authenticated" | "unauthenticated",
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ status: sessionState.status }),
+}));
+
 vi.mock("@/components/model/model-selector", () => ({
   ModelSelector: ({ selectedModelId }: { selectedModelId: string }) => (
     <button type="button">{selectedModelId}</button>
@@ -35,6 +43,36 @@ describe("Composer attachment preparation", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubGlobal("alert", vi.fn());
+    sessionState.status = "authenticated";
+  });
+
+  it("disables attachment for guest and loading session", () => {
+    sessionState.status = "unauthenticated";
+    const { container, rerender, props } = renderComposer();
+
+    const button = container.querySelector('button[title="Masuk untuk mengunggah dokumen"]') as HTMLButtonElement;
+    expect(button).toBeTruthy();
+    expect(button.disabled).toBe(true);
+
+    sessionState.status = "loading";
+    rerender(<Composer {...props} />);
+    expect((container.querySelector('button[title="Memuat sesi..."]') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("guest click does not open file picker or call upload flow", () => {
+    sessionState.status = "unauthenticated";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const create = vi.fn();
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+    const { container } = renderComposer({ onCreateConversation: create });
+
+    fireEvent.click(container.querySelector('button[title="Masuk untuk mengunggah dokumen"]')!);
+
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
   });
 
   it("uploads directly to an existing conversation", async () => {
@@ -52,6 +90,25 @@ describe("Composer attachment preparation", () => {
     expect(create).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/conversations/conversation-existing/attachments",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("attaches for authenticated New Chat without breaking auto-create", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "attachment-1", name: file.name, mimeType: file.type, sizeBytes: file.size }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const create = vi.fn().mockResolvedValue("conversation-new");
+    const { input } = renderComposer({ onCreateConversation: create });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await screen.findByText(file.name);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/conversations/conversation-new/attachments",
       expect.objectContaining({ method: "POST" }),
     );
   });

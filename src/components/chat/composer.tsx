@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { ArrowUp, Square, ArrowDown, Paperclip, X, FileText, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { ModelSelector } from "../model/model-selector";
@@ -46,11 +47,21 @@ export function Composer({
 }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === "authenticated";
+  const isAuthLoading = sessionStatus === "loading";
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [truncationWarning, setTruncationWarning] = useState<string | null>(null);
+
+  const canAttachDocuments = isAuthenticated && !disabled && !isGenerating && !isUploading && !isCreatingConversation && attachments.length < 3;
+  const attachTitle = isAuthLoading
+    ? "Memuat sesi..."
+    : isAuthenticated
+      ? (isCreatingConversation ? "Menyiapkan percakapan..." : "Attach document")
+      : "Masuk untuk mengunggah dokumen";
 
   // Stable ref so upload handler always sees the latest conversationId
   // without triggering re-renders or stale closure issues.
@@ -66,6 +77,16 @@ export function Composer({
   }, [conversationId]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canAttachDocuments) {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      if (!isAuthenticated && !isAuthLoading) {
+        alert("Masuk untuk mengunggah dokumen.");
+      }
+      return;
+    }
+
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -272,24 +293,35 @@ export function Composer({
               />
             </div>
             
-            <input
+              <input
               type="file"
               ref={fileInputRef}
               className="hidden"
               accept=".pdf,.docx,.txt,.md"
               multiple
               onChange={handleFileSelect}
-              disabled={disabled || isGenerating || isUploading || isCreatingConversation || attachments.length >= 3}
+              disabled={!canAttachDocuments}
             />
             
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0 hover:bg-secondary/80 text-muted-foreground transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isGenerating || isUploading || isCreatingConversation || attachments.length >= 3}
-              title={isCreatingConversation ? "Menyiapkan percakapan..." : "Attach document"}
+              className={cn(
+                "h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0 transition-colors text-muted-foreground",
+                canAttachDocuments ? "hover:bg-secondary/80" : "opacity-40 cursor-not-allowed",
+              )}
+              onClick={() => {
+                if (!canAttachDocuments) {
+                  if (!isAuthenticated) {
+                    alert("Masuk untuk mengunggah dokumen.");
+                  }
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+              disabled={!canAttachDocuments}
+              title={attachTitle}
             >
               <Paperclip className="h-4 w-4" />
             </Button>
