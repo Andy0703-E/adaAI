@@ -207,7 +207,7 @@ export function Composer({
             </div>
         )}
 
-        <div className="relative flex items-end w-full pb-2.5">
+        <div className="flex items-end w-full px-2 pb-2 pt-1 gap-2">
           <textarea
             ref={textareaRef}
             value={value}
@@ -216,16 +216,18 @@ export function Composer({
             placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
             rows={1}
             disabled={disabled}
-            className="w-full resize-none bg-transparent pl-5 pr-[140px] py-3 text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="w-full resize-none bg-transparent pl-3 py-2.5 text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             style={{ overflowY: "hidden" }}
           />
 
-          <div className="absolute right-3 bottom-0 mb-2.5 flex items-center gap-1.5">
-            <ModelSelector
-              selectedModelId={modelId}
-              onSelectModel={onSelectModel}
-              disabled={disabled || isGenerating}
-            />
+          <div className="flex items-center gap-1.5 shrink-0 pb-0.5 pr-1">
+            <div className="max-w-[100px] sm:max-w-[140px] truncate">
+              <ModelSelector
+                selectedModelId={modelId}
+                onSelectModel={onSelectModel}
+                disabled={disabled || isGenerating}
+              />
+            </div>
             
             <input
               type="file"
@@ -241,7 +243,7 @@ export function Composer({
               type="button"
               size="icon"
               variant="ghost"
-              className="h-10 w-10 rounded-full shrink-0 hover:bg-secondary/80 text-muted-foreground transition-colors"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0 hover:bg-secondary/80 text-muted-foreground transition-colors"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || isGenerating || isUploading || attachments.length >= 3 || !conversationId}
               title={!conversationId ? "Ketik pesan pertama untuk mengunggah" : "Attach document"}
@@ -255,7 +257,7 @@ export function Composer({
                 size="icon"
                 variant="destructive"
                 onClick={onStop}
-                className="h-10 w-10 rounded-full shadow-[0_0_18px_hsl(0_80%_62%_/_0.2)] shrink-0"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shadow-[0_0_18px_hsl(0_80%_62%_/_0.2)] shrink-0"
                 aria-label="Hentikan jawaban"
               >
                 <Square className="h-4 w-4 fill-current" />
@@ -266,7 +268,7 @@ export function Composer({
                 size="icon"
                 disabled={!value.trim() || disabled || isUploading}
                 onClick={handleSendClick}
-                className="h-10 w-10 rounded-full transition-transform active:scale-95 disabled:opacity-30 shrink-0"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full transition-transform active:scale-95 disabled:opacity-30 shrink-0"
                 aria-label="Kirim pesan"
               >
                 <ArrowUp className="h-4 w-4" />
