@@ -166,10 +166,12 @@ describe("Composer attachment preparation", () => {
     const modelWrapper = screen.getByText("Deepseek V4 Flash Vision Exp").parentElement;
     const actionRow = modelWrapper?.parentElement;
 
-    expect(textarea.className).toContain("flex-1");
-    expect(textarea.className).toContain("min-w-0");
-    expect(modelWrapper?.className).toContain("max-w-[150px]");
+    expect(textarea.className).toContain("w-full");
+    expect(textarea.className).toContain("min-h-[26px]");
+    expect(textarea.className).toContain("overflow-hidden");
+    expect(modelWrapper?.className).toContain("max-w-[160px]");
     expect(modelWrapper?.className).toContain("lg:max-w-[300px]");
+    expect(actionRow?.className).toContain("justify-end");
     expect(actionRow?.className).not.toContain("absolute");
     expect(container.querySelector('[aria-label="Kirim pesan"]')).not.toBeNull();
     expect(container.querySelector('[title="Attach document"]')).not.toBeNull();

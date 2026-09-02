@@ -225,7 +225,7 @@ export function Composer({
         </div>
       )}
 
-      <div className="skeu-composer relative flex flex-col transition-all duration-200 min-h-[56px] justify-end">
+      <div className="skeu-composer relative flex h-auto min-h-0 flex-col transition-all duration-200">
         
         {/* Attachments UI */}
         {attachments.length > 0 && (
@@ -271,7 +271,7 @@ export function Composer({
             </div>
         )}
 
-        <div className="flex items-end w-full px-2 pb-2 pt-1 gap-2">
+        <div className="px-2 pt-1">
           <textarea
             ref={textareaRef}
             value={value}
@@ -280,12 +280,13 @@ export function Composer({
             placeholder="Tanyakan apa saja kepada AdaAI... (Shift+Enter untuk baris baru)"
             rows={1}
             disabled={disabled}
-            className="min-w-0 flex-1 resize-none bg-transparent py-2.5 pl-3 text-[15px] font-normal leading-[1.6] placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            className="block h-auto min-h-[26px] w-full min-w-0 resize-none overflow-hidden bg-transparent px-3 pt-2.5 pb-1.5 text-[15px] font-normal leading-[1.6] placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             style={{ overflowY: "hidden" }}
           />
+        </div>
 
-          <div className="flex min-w-0 shrink-0 items-center gap-1.5 pb-0.5 pr-1">
-            <div className="min-w-0 w-auto max-w-[150px] sm:max-w-[210px] md:max-w-[260px] lg:max-w-[300px]">
+        <div className="flex items-center justify-end gap-1.5 px-2 pb-2 pt-1">
+            <div className="min-w-0 max-w-[160px] flex-1 sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px]">
               <ModelSelector
                 selectedModelId={modelId}
                 onSelectModel={onSelectModel}
@@ -349,7 +350,6 @@ export function Composer({
                 <ArrowUp className="h-4 w-4" />
               </Button>
             )}
-          </div>
         </div>
       </div>
        <p className="mt-2 text-center text-[11px] font-normal text-muted-foreground">
