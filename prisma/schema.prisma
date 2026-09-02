@@ -1,0 +1,153 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ConversationStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
+enum MessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model User {
+  id               String        @id @default(uuid()) @db.Uuid
+  name             String        @db.VarChar(120)
+  email            String        @unique @db.VarChar(320)
+  passwordHash     String        @map("password_hash") @db.Text
+  image            String?       @db.Text
+  emailVerifiedAt  DateTime?     @map("email_verified_at") @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  conversations    Conversation[]
+  settings         UserSettings?
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Conversation {
+  id             String             @id @default(uuid()) @db.Uuid
+  userId         String             @map("user_id") @db.Uuid
+  title          String             @default("New Chat") @db.VarChar(200)
+  status         ConversationStatus @default(DRAFT)
+  providerKey    String             @map("provider_key") @db.VarChar(80)
+  modelId        String             @map("model_id") @db.VarChar(200)
+  systemPrompt   String?            @map("system_prompt") @db.Text
+  lastMessageAt  DateTime?          @map("last_message_at") @db.Timestamptz(6)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
+  @@index([userId, lastMessageAt(sort: Desc)], name: "conversations_user_last_message_idx")
+  @@index([userId, status, lastMessageAt(sort: Desc)], name: "conversations_user_status_last_message_idx")
+  @@index([userId, lastMessageAt(sort: Desc), id(sort: Desc)], name: "conversations_user_cursor_idx")
+  @@map("conversations")
+}
+
+model Message {
+  id               String        @id @default(uuid()) @db.Uuid
+  conversationId   String        @map("conversation_id") @db.Uuid
+  sequenceNo       Int           @map("sequence_no")
+  role             MessageRole
+  content          String        @default("") @db.Text
+  status           MessageStatus @default(PENDING)
+  providerKey      String?       @map("provider_key") @db.VarChar(80)
+  modelId          String?       @map("model_id") @db.VarChar(200)
+  promptTokens     Int?          @map("prompt_tokens")
+  completionTokens Int?          @map("completion_tokens")
+  totalTokens      Int?          @map("total_tokens")
+  finishReason     String?       @map("finish_reason") @db.VarChar(80)
+  errorCode        String?       @map("error_code") @db.VarChar(80)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  conversation     Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, sequenceNo], name: "messages_conversation_sequence_key")
+  @@index([conversationId, sequenceNo(sort: Asc)], name: "messages_conversation_sequence_idx")
+  @@index([conversationId, createdAt(sort: Asc)], name: "messages_conversation_created_idx")
+  @@index([status], name: "messages_status_idx")
+  @@map("messages")
+}
+
+model UserSettings {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @map("user_id") @db.Uuid
+  defaultProviderKey String?  @map("default_provider_key") @db.VarChar(80)
+  defaultModelId     String?  @map("default_model_id") @db.VarChar(200)
+  systemPrompt       String?  @map("system_prompt") @db.Text
+  temperature        Float?
+  maxOutputTokens    Int?     @map("max_output_tokens")
+  theme              Theme    @default(SYSTEM)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model ModelCache {
+  id              String    @id @default(uuid()) @db.Uuid
+  providerKey     String    @map("provider_key") @db.VarChar(80)
+  modelId         String    @map("model_id") @db.VarChar(200)
+  displayName     String    @map("display_name") @db.VarChar(200)
+  isAvailable     Boolean   @default(true) @map("is_available")
+  capabilities    Json?
+  contextWindow   Int?      @map("context_window")
+  maxOutputTokens Int?      @map("max_output_tokens")
+  metadata        Json?
+  lastSeenAt      DateTime? @map("last_seen_at") @db.Timestamptz(6)
+  lastSyncedAt    DateTime  @map("last_synced_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([providerKey, modelId], name: "model_cache_provider_model_key")
+  @@index([providerKey, isAvailable], name: "model_cache_available_idx")
+  @@index([lastSyncedAt], name: "model_cache_synced_idx")
+  @@map("model_cache")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(80)
+  entityId   String?  @map("entity_id") @db.Uuid
+  requestId  String?  @map("request_id") @db.VarChar(100)
+  ipHash     String?  @map("ip_hash") @db.VarChar(128)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
