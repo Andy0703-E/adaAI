@@ -1,14 +1,22 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import { ArrowUp, Square, ArrowDown } from "lucide-react";
+import React, { useRef, useEffect, useState } from "react";
+import { ArrowUp, Square, ArrowDown, Paperclip, X, FileText, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { ModelSelector } from "../model/model-selector";
+import { cn } from "@/lib/utils/cn";
+
+export interface Attachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+}
 
 interface ComposerProps {
   value: string;
   onChange: (value: string) => void;
-  onSend: () => void;
+  onSend: (attachmentIds?: string[]) => void;
   onStop: () => void;
   isGenerating: boolean;
   disabled?: boolean;
@@ -16,6 +24,7 @@ interface ComposerProps {
   onScrollToBottom?: () => void;
   modelId?: string;
   onSelectModel?: (modelId: string) => void;
+  conversationId?: string | null;
 }
 
 export function Composer({
@@ -29,8 +38,77 @@ export function Composer({
   onScrollToBottom,
   modelId = "auto",
   onSelectModel = () => {},
+  conversationId,
 }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Reset attachments when conversation changes
+  useEffect(() => {
+    setAttachments([]);
+  }, [conversationId]);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (attachments.length + files.length > 3) {
+      alert("Maksimal 3 lampiran per pesan.");
+      return;
+    }
+
+    if (!conversationId) {
+       alert("Harap ketik pesan pertama Anda sebelum mengunggah dokumen.");
+       return;
+    }
+
+    setIsUploading(true);
+
+    for (const file of files) {
+      if (file.size > 5242880) {
+        alert(`${file.name} melebihi batas 5MB.`);
+        continue;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch(`/api/v1/conversations/${conversationId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Gagal mengunggah dokumen");
+        }
+
+        setAttachments((prev) => [...prev, {
+            id: data.id,
+            name: data.name,
+            mimeType: data.mimeType,
+            sizeBytes: data.sizeBytes
+        }]);
+
+      } catch (error: any) {
+        alert(error.message);
+      }
+    }
+
+    setIsUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''; // Reset input
+    }
+  };
+
+  const removeAttachment = (idToRemove: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== idToRemove));
+  };
 
   // Autosize textarea
   useEffect(() => {
@@ -45,9 +123,17 @@ export function Composer({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isGenerating && value.trim() && !disabled) {
-        onSend();
+      if (!isGenerating && value.trim() && !disabled && !isUploading) {
+        onSend(attachments.length > 0 ? attachments.map(a => a.id) : undefined);
+        setAttachments([]);
       }
+    }
+  };
+
+  const handleSendClick = () => {
+    if (!isGenerating && value.trim() && !disabled && !isUploading) {
+        onSend(attachments.length > 0 ? attachments.map(a => a.id) : undefined);
+        setAttachments([]);
     }
   };
 
@@ -71,6 +157,37 @@ export function Composer({
       )}
 
       <div className="skeu-composer relative flex flex-col transition-all duration-200">
+        
+        {/* Attachments UI */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-4 pt-3 pb-1">
+            {attachments.map((file) => (
+              <div 
+                key={file.id}
+                className="flex items-center gap-2 bg-secondary/50 rounded-md py-1.5 px-3 text-xs border border-border/50"
+              >
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="max-w-[120px] truncate">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(file.id)}
+                  className="hover:bg-background rounded-full p-0.5 ml-1 transition-colors"
+                  disabled={isGenerating || isUploading}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {isUploading && (
+          <div className="flex items-center gap-2 px-4 pt-3 pb-1 text-xs text-muted-foreground">
+             <Loader2 className="h-3.5 w-3.5 animate-spin" />
+             <span>Reading document...</span>
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={value}
@@ -88,6 +205,29 @@ export function Composer({
             onSelectModel={onSelectModel}
             disabled={disabled || isGenerating}
           />
+          
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf,.docx,.txt,.md"
+            multiple
+            onChange={handleFileSelect}
+            disabled={disabled || isGenerating || isUploading || attachments.length >= 3}
+          />
+          
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-10 w-10 rounded-full shrink-0"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || isGenerating || isUploading || attachments.length >= 3 || !conversationId}
+            title={!conversationId ? "Ketik pesan pertama untuk mengunggah" : "Attach document"}
+          >
+            <Paperclip className="h-4 w-4 text-muted-foreground" />
+          </Button>
+
           {isGenerating ? (
             <Button
               type="button"
@@ -103,8 +243,8 @@ export function Composer({
             <Button
               type="button"
               size="icon"
-              disabled={!value.trim() || disabled}
-              onClick={onSend}
+              disabled={!value.trim() || disabled || isUploading}
+              onClick={handleSendClick}
               className="h-10 w-10 rounded-full transition-transform active:scale-95 disabled:opacity-30"
               aria-label="Kirim pesan"
             >
