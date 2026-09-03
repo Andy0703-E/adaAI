@@ -122,8 +122,8 @@ export function MessageItem({
         <img src="/adaai-robot.jpg" alt="AdaAI" />
       </div>
 
-      <div className="w-full space-y-2 overflow-hidden">
-        <div className="skeu-assistant-card relative px-4 py-3 text-[15px] font-normal leading-[1.65] overflow-hidden min-w-0">
+      <div className="w-full space-y-2">
+        <div className="skeu-assistant-card relative px-4 py-3 text-[15px] font-normal leading-[1.65] min-w-0">
           {message.status === "PENDING" && !message.content ? (
           <div className="flex items-center gap-2 py-1 text-[14px] font-normal text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-primary animate-ping" />

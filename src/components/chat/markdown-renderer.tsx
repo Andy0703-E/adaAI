@@ -42,9 +42,9 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const [thoughtsOpen, setThoughtsOpen] = React.useState(isThinking);
 
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] sm:text-base leading-[1.65] break-words space-y-3 font-normal overflow-hidden">
+    <div className="w-full min-w-0 max-w-none text-[15px] sm:text-base leading-[1.65] break-words space-y-3 font-normal">
       {thoughts && (
-        <div className="skeu-inset my-2 overflow-hidden rounded-xl text-xs not-prose">
+        <div className="skeu-inset my-2 overflow-hidden rounded-xl text-xs">
           <button
             type="button"
             onClick={() => setThoughtsOpen((prev) => !prev)}
