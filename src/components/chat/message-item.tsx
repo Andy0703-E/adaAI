@@ -117,13 +117,13 @@ export function MessageItem({
   }
 
   return (
-    <div className="flex gap-3 sm:gap-4 my-6 group lg:-translate-x-4">
+    <div className="flex gap-3 sm:gap-4 my-6 group">
       <div className="brand-mark flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-xl">
         <img src="/adaai-robot.jpg" alt="AdaAI" />
       </div>
 
       <div className="flex-1 space-y-2 overflow-hidden">
-        <div className="skeu-assistant-card px-4 py-3 text-[15px] font-normal leading-[1.65]">
+        <div className="skeu-assistant-card px-4 py-3 text-[15px] font-normal leading-[1.65] overflow-hidden min-w-0">
           {message.status === "PENDING" && !message.content ? (
           <div className="flex items-center gap-2 py-1 text-[14px] font-normal text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-full bg-primary animate-ping" />

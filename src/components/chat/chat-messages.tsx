@@ -112,9 +112,9 @@ export function ChatMessages({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-4"
+        className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-5 py-4"
       >
-        <div className="max-w-4xl mx-auto space-y-2 pb-6">
+        <div className="w-full max-w-[900px] mx-auto space-y-2 pb-6">
           {messages.map((msg, idx) => (
             <MessageItem
               key={msg.id || idx}

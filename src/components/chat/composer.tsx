@@ -207,7 +207,7 @@ export function Composer({
   };
 
   return (
-    <div data-testid="chat-composer" className="relative z-20 w-full max-w-4xl mx-auto px-3 sm:px-4 pb-3 sm:pb-4 shrink-0">
+    <div data-testid="chat-composer" className="relative z-20 w-full max-w-[900px] mx-auto px-3 sm:px-4 md:px-5 pb-3 sm:pb-4 shrink-0">
       {/* Floating scroll-to-bottom button: centered directly above composer at z-30 */}
       {showScrollBottom && (
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30">
@@ -285,7 +285,7 @@ export function Composer({
           />
 
           <div className="flex items-center justify-end gap-1.5 sm:shrink-0">
-            <div className="min-w-0 w-auto max-w-[160px] flex-1 sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px]">
+            <div className="min-w-0 w-auto max-w-[160px] flex-1 sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px] overflow-hidden">
               <ModelSelector
                 selectedModelId={modelId}
                 onSelectModel={onSelectModel}

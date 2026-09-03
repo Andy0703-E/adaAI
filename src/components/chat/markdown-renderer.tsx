@@ -42,7 +42,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const [thoughtsOpen, setThoughtsOpen] = React.useState(isThinking);
 
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] sm:text-base leading-[1.65] break-words space-y-3 font-normal">
+    <div className="prose prose-neutral dark:prose-invert max-w-none text-[15px] sm:text-base leading-[1.65] break-words space-y-3 font-normal overflow-hidden">
       {thoughts && (
         <div className="skeu-inset my-2 overflow-hidden rounded-xl text-xs not-prose">
           <button
@@ -100,7 +100,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           },
           table({ children }) {
             return (
-              <div className="skeu-inset my-4 w-full overflow-y-auto rounded-xl">
+              <div className="skeu-inset my-4 w-full overflow-auto rounded-xl">
                 <table className="w-full text-left text-sm">{children}</table>
               </div>
             );

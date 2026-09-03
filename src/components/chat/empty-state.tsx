@@ -110,7 +110,7 @@ export function EmptyState({ onSelectSuggestion }: EmptyStateProps) {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center mx-auto max-w-2xl px-4 py-6 text-center animate-in fade-in-50 duration-300 sm:py-8">
+    <div className="flex flex-1 flex-col items-center justify-center mx-auto w-full max-w-[900px] px-3 sm:px-4 md:px-5 py-6 text-center animate-in fade-in-50 duration-300 sm:py-8">
       <div data-testid="empty-state-logo" className="auth-orbit relative z-20 mb-5 sm:mb-6">
         <div className="brand-mark relative flex h-20 w-20 items-center justify-center rounded-[1.65rem]">
           <Image
